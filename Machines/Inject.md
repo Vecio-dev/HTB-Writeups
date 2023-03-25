@@ -159,9 +159,11 @@ Now Google is your friend, start searching for known vulnerabilities we can expl
 
 ### Exploiting
 We find [CVE-2022-22963: Remote Code Execution in Spring Cloud Function by malicius Spring Expression](https://spring.io/security/cve-2022-22963).
+
 "In Spring Cloud Function versions 3.1.6, 3.2.2 and older unsupported versions, when using routing functionality it is possible for a user to provide a specially crafted SpEL as a routing-expression that may result in remote code execution and access to local resources".
 
 Let's understand how the vulnerability works ([source](https://sysdig.com/blog/cve-2022-22963-spring-cloud/#:~:text=The%20vulnerability%20CVE%2D2022%2D22963,also%20allows%20remote%20code%20execution.)):
+
 The Spring Cloud Function framework allows developers to write cloud-agnostic functions using Spring features. These functions can be stand-alone classes and one can easily deploy them on any cloud platform yo build a serverless framework.
 The major advantage of Spring Cloud Function is that it provides all the features of Spring Boot-like autoconfiguration and dependency injection.
 The issue is that it permits using HTTP request header `spring.cloud.function.routing-expression` parameter and SpEL expression to be injected and executed through `StandardEvaluationContext`.
