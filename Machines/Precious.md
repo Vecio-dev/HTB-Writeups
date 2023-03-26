@@ -72,7 +72,7 @@ Calling `to_pdf` on the instance shows that the `sleep` command is indeed execut
 The `%20` is a URL-encoded space character, which allows the attacker to separate the injected command from the rest of the URL.
 When PDFKit is used to generate a PDF from a URL, it first converts the URL into a command line argument string that is passed to a command line tool to generate the PDF.
 
-So we can input the URL `http://10.10.16.79:8000/?name=%20&#x60sleep 5&#x60` to test the vulnerability and see that the operation takes 5 seconds to get the PDF file, so the website is vulnerable to this exploit.
+So we can input the URL `` http://10.10.16.79:8000/?name=%20`sleep 5` `` to test the vulnerability and see that the operation takes 5 seconds to get the PDF file, so the website is vulnerable to this exploit.
 
 ## Reverse Shell
 We can now execute a reverse shell script to get access to the server.
