@@ -152,16 +152,16 @@ Going on with the enumeration we can find the Java configuration file `pom.xml` 
 </project>
 ```
 From this configuration file we can find some useful information:
-    * The framework used: `SpringFramework` version `2.6.5`
-    * Java version: `11`
-    * The list of dependencies used:
-        * `javax.activation` version `1.2.0`
-        * `spring-boot-starter-thymeleaf`
-        * `spring-boot-starter-web`
-        * `spring-boot-devtools`
-        * `spring-cloud-function-web` version `3.2.2`
-        * `bootstrap` version `5.1.3`
-        * `webjars-locator-core`
+* The framework used: `SpringFramework` version `2.6.5`
+* Java version: `11`
+* The list of dependencies used:
+    * `javax.activation` version `1.2.0`
+    * `spring-boot-starter-thymeleaf`
+    * `spring-boot-starter-web`
+    * `spring-boot-devtools`
+    * `spring-cloud-function-web` version `3.2.2`
+    * `bootstrap` version `5.1.3`
+    * `webjars-locator-core`
 
 Now Google is your friend, start searching for known vulnerabilities we can exploit.
 
