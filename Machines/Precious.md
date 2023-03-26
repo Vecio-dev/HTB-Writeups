@@ -3,6 +3,9 @@
 ## Summary
 
 * [Info Gathering](#info-gathering)
+* [Exploiting](#exploiting)
+* [User](#user)
+* [Root](#root)
 
 ## Info Gathering
 First thing let's scan for the open ports:
