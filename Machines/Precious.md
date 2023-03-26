@@ -31,13 +31,13 @@ We can check out the web server, so we add the IP address to the `/etc/hosts` fi
 ```
 We can now access the web server on the browser using its domain or the IP address.
 
-The only functionality the web page is to convert a web page into a PDF file.
+The only functionality present is to convert a web page into a PDF file.
 We can test that out by starting a python web server and trying to get its PDF file.
 ```bash
 python -m http.server
 ```
 We can now enter our IP address followed by the port which the python web server has been opened: `http://10.10.16.79:8000/` and get its PDF file.
-We can get more information about the PDF file by reading its metadata using the `Exiftool`, so `exiftool file.pdf`:
+We can get more information by reading the file metadata using the `Exiftool`, so `exiftool file.pdf`:
 ```
 ExifTool Version Number         : 12.50
 File Name                       : edlaxwm1d82couplf7vpkkm9b4nyht3g.pdf
@@ -72,7 +72,7 @@ Calling `to_pdf` on the instance shows that the `sleep` command is indeed execut
 The `%20` is a URL-encoded space character, which allows the attacker to separate the injected command from the rest of the URL.
 When PDFKit is used to generate a PDF from a URL, it first converts the URL into a command line argument string that is passed to a command line tool to generate the PDF.
 
-So we can input the URL `http://10.10.16.79:8000/?name=%20\`sleep 5\`` to test the vulnerability and see that the operation takes 5 seconds to get the PDF file, so the website is vulnerable to this exploit.
+So we can input the URL `http://10.10.16.79:8000/?name=%20&#x60sleep 5&#x60` to test the vulnerability and see that the operation takes 5 seconds to get the PDF file, so the website is vulnerable to this exploit.
 
 ## Reverse Shell
 We can now execute a reverse shell script to get access to the server.
