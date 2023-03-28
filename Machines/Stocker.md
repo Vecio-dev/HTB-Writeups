@@ -1,6 +1,12 @@
 # Stocker
 
 ## Summary
+* [General Enumeration](#general-enumeration)
+* [Login Exploiting](#login-exploiting)
+* [Stock Enumeration](#stock-enumeration)
+* [Stock Exploitation](#stock-exploitation)
+* [User](#user)
+* [Root](#root)
 
 ## General Enumeration
 First thing let's scan for the open ports:
